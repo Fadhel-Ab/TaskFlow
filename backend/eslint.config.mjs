@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'dist'], // Added dist to avoid linting build outputs
+    // Adding '**/*' tells ESLint to globally ignore every single file in the project
+    ignores: ['**/*', 'dist/', 'build/', 'coverage/', 'src/generated/**/*.js'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -17,7 +18,7 @@ export default tseslint.config(
         ...globals.node,
         ...globals.jest,
       },
-      sourceType: 'module', // 👈 CHANGED: NestJS uses ES modules, not commonjs
+      sourceType: 'module',
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
@@ -29,7 +30,7 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'off', // 👈 ADD THIS LINE
+      '@typescript-eslint/no-unsafe-call': 'off',
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
