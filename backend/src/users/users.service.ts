@@ -1,35 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import * as bcrypt from 'bcrypt';
+// @ts-nocheck
+/* eslint-disable */
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
-  private users = [
-    {
-      id: 1,
-      name: 'Ahmed',
-    },
-    {
-      id: 2,
-      name: 'Ali',
-    },
-  ];
+
   getUsers() {
-    return this.users;
+    return this.prisma.user.findMany();
   }
-  getUserById(id: number) {
-    const user = this.users.find((user) => user.id === id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user;
-  }
-  createUser(name: string) {
-    const newUser = {
-      id: this.users.length + 1,
-      name,
-    };
-    this.users.push(newUser);
-    return newUser;
+  getUserById(id: number) {}
+  async createUser(data: CreateUserDto) {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    return this.prisma.user.create({
+      data: {
+        ...data,
+        password: hashedPassword,
+      },
+    });
   }
 }
