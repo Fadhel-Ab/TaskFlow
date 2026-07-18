@@ -8,15 +8,22 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskStatus } from '@prisma/client';
 import { allowedTransitions } from './task-workflow';
 import { TaskAction } from './task-actions';
+import { TaskActivityService } from './task-activity.service';
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
-
-  createTask(data: CreateTaskDto) {
-    return this.prisma.task.create({
+  constructor(
+    private prisma: PrismaService,
+    private activityService: TaskActivityService,
+  ) {}
+  async createTask(data: CreateTaskDto, userId: number) {
+    const task = await this.prisma.task.create({
       data,
     });
+
+    await this.activityService.create(task.id, userId, 'CREATED');
+
+    return task;
   }
 
   getTasks() {
@@ -35,48 +42,59 @@ export class TasksService {
       },
     });
   }
-  assignTask(taskId: number, assigneeId: number) {
-    return this.prisma.task.update({
+  async assignTask(taskId: number, assigneeId: number, userId: number) {
+    const task = await this.prisma.task.update({
       where: {
         id: taskId,
       },
       data: {
         assigneeId,
       },
-      include: {
-        assignee: true,
+    });
+
+    await this.activityService.create(
+      taskId,
+      userId,
+      `ASSIGNED_TO_${assigneeId}`,
+    );
+
+    return task;
+  }
+  async updateStatus(taskId: number, status: TaskStatus, user) {
+    const task = await this.prisma.task.findUnique({
+      where: {
+        id: taskId,
       },
     });
-  }
-  async updateStatus(taskId: number, status: TaskStatus) {
-    return this.prisma.task
-      .findUnique({
-        where: {
-          id: taskId,
-        },
-      })
-      .then((task) => {
-        if (!task) {
-          throw new BadRequestException('Task not found');
-        }
 
-        const allowed = allowedTransitions[task.status].includes(status);
+    if (!task) {
+      throw new BadRequestException('Task not found');
+    }
 
-        if (!allowed) {
-          throw new BadRequestException(
-            `Cannot move task from ${task.status} to ${status}`,
-          );
-        }
+    const allowed = allowedTransitions[task.status].includes(status);
 
-        return this.prisma.task.update({
-          where: {
-            id: taskId,
-          },
-          data: {
-            status,
-          },
-        });
-      });
+    if (!allowed) {
+      throw new BadRequestException(
+        `Cannot move task from ${task.status} to ${status}`,
+      );
+    }
+
+    const updatedTask = await this.prisma.task.update({
+      where: {
+        id: taskId,
+      },
+      data: {
+        status,
+      },
+    });
+
+    await this.activityService.create(
+      taskId,
+      user.id,
+      `STATUS_CHANGED_TO_${status}`,
+    );
+
+    return updatedTask;
   }
   async performAction(taskId: number, action: TaskAction, user) {
     const task = await this.prisma.task.findUnique({
@@ -135,7 +153,7 @@ export class TasksService {
         break;
     }
 
-    return this.updateStatus(taskId, nextStatus);
+    return this.updateStatus(taskId, nextStatus, user);
   }
 
   async getMyTasks(userId: number) {
@@ -145,6 +163,25 @@ export class TasksService {
       },
       include: {
         assignee: true,
+      },
+    });
+  }
+
+  async getTimeline(taskId: number) {
+    return this.prisma.taskActivity.findMany({
+      where: {
+        taskId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
       },
     });
   }

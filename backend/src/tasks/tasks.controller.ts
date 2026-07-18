@@ -16,8 +16,8 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  createTask(@Body() dto: CreateTaskDto) {
-    return this.tasksService.createTask(dto);
+  createTask(@Body() dto: CreateTaskDto, @CurrentUser() user) {
+    return this.tasksService.createTask(dto, user.id);
   }
 
   @Get()
@@ -29,6 +29,12 @@ export class TasksController {
   @UseGuards(JwtAuthGuard)
   getMyTasks(@CurrentUser() user) {
     return this.tasksService.getMyTasks(user.id);
+  }
+
+  @Get(':id/timeline')
+  @UseGuards(JwtAuthGuard)
+  getTimeline(@Param('id') id: string) {
+    return this.tasksService.getTimeline(Number(id));
   }
   @Get(':id')
   getTaskById(@Param('id') id: string) {
@@ -43,8 +49,12 @@ export class TasksController {
 
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard)
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateTaskStatusDto) {
-    return this.tasksService.updateStatus(Number(id), dto.status);
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateTaskStatusDto,
+    @CurrentUser() user,
+  ) {
+    return this.tasksService.updateStatus(Number(id), dto.status, user);
   }
   @Patch(':id/action')
   @UseGuards(JwtAuthGuard)
