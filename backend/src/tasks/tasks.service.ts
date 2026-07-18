@@ -1,8 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskStatus } from '@prisma/client';
 import { allowedTransitions } from './task-workflow';
+import { TaskAction } from './task-actions';
 
 @Injectable()
 export class TasksService {
@@ -72,5 +77,75 @@ export class TasksService {
           },
         });
       });
+  }
+  async performAction(taskId: number, action: TaskAction, user) {
+    const task = await this.prisma.task.findUnique({
+      where: {
+        id: taskId,
+      },
+    });
+
+    if (!task) {
+      throw new BadRequestException('Task not found');
+    }
+
+    let nextStatus: TaskStatus;
+    if (
+      user.role === 'MEMBER' &&
+      ![TaskAction.START, TaskAction.SUBMIT_REVIEW].includes(action)
+    ) {
+      throw new ForbiddenException('Members cannot perform this action');
+    }
+
+    if (
+      user.role === 'MANAGER' &&
+      ![
+        TaskAction.ACCEPT,
+        TaskAction.SEND_BACK,
+        TaskAction.CANCEL,
+        TaskAction.REOPEN,
+      ].includes(action)
+    ) {
+      throw new ForbiddenException('Managers cannot perform this action');
+    }
+
+    switch (action) {
+      case TaskAction.START:
+        nextStatus = TaskStatus.IN_PROGRESS;
+        break;
+
+      case TaskAction.SUBMIT_REVIEW:
+        nextStatus = TaskStatus.IN_REVIEW;
+        break;
+
+      case TaskAction.ACCEPT:
+        nextStatus = TaskStatus.DONE;
+        break;
+
+      case TaskAction.CANCEL:
+        nextStatus = TaskStatus.CANCELLED;
+        break;
+
+      case TaskAction.REOPEN:
+        nextStatus = TaskStatus.BACKLOG;
+        break;
+
+      case TaskAction.SEND_BACK:
+        nextStatus = TaskStatus.IN_PROGRESS;
+        break;
+    }
+
+    return this.updateStatus(taskId, nextStatus);
+  }
+
+  async getMyTasks(userId: number) {
+    return this.prisma.task.findMany({
+      where: {
+        assigneeId: userId,
+      },
+      include: {
+        assignee: true,
+      },
+    });
   }
 }

@@ -1,0 +1,8 @@
+export enum TaskAction {
+  START = 'START',
+  SUBMIT_REVIEW = 'SUBMIT_REVIEW',
+  ACCEPT = 'ACCEPT',
+  SEND_BACK = 'SEND_BACK',
+  CANCEL = 'CANCEL',
+  REOPEN = 'REOPEN',
+}

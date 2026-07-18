@@ -49,7 +49,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tasks Task[]
+  tasks      Task[]
+  activities TaskActivity[]
 }
 
 model Task {
@@ -70,4 +71,20 @@ model Task {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  activities TaskActivity[]
+}
+
+model TaskActivity {
+  id Int @id @default(autoincrement())
+
+  action String
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
 }
