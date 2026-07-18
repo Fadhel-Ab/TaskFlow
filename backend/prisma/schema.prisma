@@ -18,17 +18,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  MANAGER
+  MEMBER
+}
+
+enum TaskStatus {
+  BACKLOG
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
 model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
   password  String
   role      Role     @default(MEMBER)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  tasks Task[]
 }
 
-enum Role {
-  MANAGER
-  MEMBER
+model Task {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?
+
+  status      TaskStatus @default(BACKLOG)
+
+  assigneeId  Int?
+  assignee    User?      @relation(fields: [assigneeId], references: [id])
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
