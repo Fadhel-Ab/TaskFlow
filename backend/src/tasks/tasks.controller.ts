@@ -43,8 +43,12 @@ export class TasksController {
   @Patch(':id/assign')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('MANAGER')
-  assignTask(@Param('id') id: string, @Body() dto: AssignTaskDto) {
-    return this.tasksService.assignTask(Number(id), dto.assigneeId);
+  assignTask(
+    @Param('id') id: string,
+    @Body() dto: AssignTaskDto,
+    @CurrentUser() user,
+  ) {
+    return this.tasksService.assignTask(Number(id), dto.assigneeId, user);
   }
 
   @Patch(':id/status')
