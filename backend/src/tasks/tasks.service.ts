@@ -90,7 +90,7 @@ export class TasksService {
 
     await this.activityService.create(
       taskId,
-      user.id,
+      user.userId,
       `STATUS_CHANGED_TO_${status}`,
     );
 
